@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ultimate East Lansing & Service Rd Lunch Spinner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      color: #18453B; /* MSU Green */
+      margin-bottom: 5px;
+      text-align: center;
+    }
+
+    p {
+      color: #555;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 500px;
+      height: 500px;
+      max-width: 92vw;
+      max-height: 92vw;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid #d9534f;
+      z-index: 10;
+    }
+
+    #spin-btn {
+      margin-top: 25px;
+      padding: 14px 40px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background-color: #18453B;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+    }
+
+    #spin-btn:hover {
+      background-color: #12342c;
+      transform: translateY(-2px);
+    }
+
+    #spin-btn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #18453B;
+      min-height: 30px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Mega East Lansing Lunch Spinner</h1>
+  <p>32 spots around Service Rd, Trowbridge, Hagadorn, & Grand River!</p>
+
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="canvas" width="600" height="600"></canvas>
+  </div>
+
+  <button id="spin-btn">SPIN THE WHEEL</button>
+  <div id="result"></div>
+
+  <script>
+    const restaurants = [
+      // --- Trowbridge / Harrison Corridor (Seconds from Service Rd) ---
+      { name: "Hobies Cafe", color: "#18453B" },
+      { name: "Woody's Oasis", color: "#2E5B88" },
+      { name: "Korea House", color: "#8B263E" },
+      { name: "Harrison Rdhouse", color: "#D97724" },
+      { name: "Fresh Fish & Fry", color: "#5A3E85" },
+      { name: "Sultan's Express", color: "#2A7B6D" },
+      { name: "Mexico 2 GO", color: "#A83232" },
+
+      // --- Hagadorn / Hannah Blvd Corridor ---
+      { name: "Sansu Sushi", color: "#4A6B32" },
+      { name: "Swagath Indian", color: "#18453B" },
+      { name: "Natural Disaster Brew", color: "#2E5B88" },
+      { name: "Poke Lab", color: "#8B263E" },
+
+      // --- Downtown East Lansing / Grand River ---
+      { name: "HopCat", color: "#D97724" },
+      { name: "Crunchy's", color: "#5A3E85" },
+      { name: "El Azteco", color: "#2A7B6D" },
+      { name: "Peanut Barrel", color: "#A83232" },
+      { name: "Beggar's Banquet", color: "#4A6B32" },
+      { name: "Taste of Thai", color: "#18453B" },
+      { name: "Jolly Pumpkin", color: "#2E5B88" },
+      { name: "Barrio Tacos", color: "#8B263E" },
+      { name: "Charlie Kang's", color: "#D97724" },
+      { name: "Conrad's Grill", color: "#5A3E85" },
+      { name: "Bell's Greek Pizza", color: "#2A7B6D" },
+      { name: "Lou & Harry's", color: "#A83232" },
+      { name: "Dave's Hot Chicken", color: "#4A6B32" },
+      { name: "Detroit Wing Co", color: "#18453B" },
+      { name: "Dublin Square", color: "#2E5B88" },
+
+      // --- Quick Eastside / Michigan Ave / Nearby ---
+      { name: "Soup Spoon Cafe", color: "#8B263E" },
+      { name: "Meat BBQ", color: "#D97724" },
+      { name: "Naing Myanmar", color: "#5A3E85" },
+      { name: "Tropical Smoothie", color: "#2A7B6D" },
+      { name: "Jersey Giant Subs", color: "#A83232" },
+      { name: "El Oasis Truck", color: "#4A6B32" }
+    ];
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const spinBtn = document.getElementById("spin-btn");
+    const resultDiv = document.getElementById("result");
+
+    const numSlices = restaurants.length;
+    const sliceAngle = (2 * Math.PI) / numSlices;
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = canvas.width / 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      restaurants.forEach((item, index) => {
+        const startAngle = currentAngle + index * sliceAngle;
+        const endAngle = startAngle + sliceAngle;
+
+        // Draw Slice
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw Text
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText(item.name, radius - 10, 4);
+        ctx.restore();
+      });
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+      resultDiv.innerText = "";
+
+      // Random rotation force (5 to 10 full turns plus offset)
+      const totalRotation = (Math.random() * 5 + 5) * 2 * Math.PI;
+      const duration = 4500; 
+      const startTime = performance.now();
+      const initialAngle = currentAngle;
+
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease-out cubic formula
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        currentAngle = initialAngle + totalRotation * easeOut;
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          spinBtn.disabled = false;
+          determineWinner();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function determineWinner() {
+      const normalizedAngle = (currentAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const pointerAngle = (3 * Math.PI / 2);
+      
+      let winningIndex = Math.floor((pointerAngle - normalizedAngle + 2 * Math.PI) % (2 * Math.PI) / sliceAngle);
+      
+      const winner = restaurants[winningIndex].name;
+      resultDiv.innerText = `🎉 Let's go to: ${winner}!`;
+    }
+
+    drawWheel();
+    spinBtn.addEventListener("click", spin);
+  </script>
+</body>
+</html>
